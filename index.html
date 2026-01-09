@@ -3,53 +3,86 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Prototipo - Gestão de Tempo</title>
+    <title>Gestao do Tempo</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <main class="frame">
       <header class="top">
-        <h1>Gestão de Tempo</h1>
+        <div>
+          <p class="eyebrow">MVP - Nivel 1 (um dia)</p>
+          <h1>Gestao do Tempo</h1>
+        </div>
         <div class="meta">
-          <span>Fase 1: escolha ate 9 objetos</span>
-          <span>Fase 2: atravesse segurando seta direita</span>
+          <span>Planeje</span>
+          <span>Execute</span>
+          <span>Revise</span>
         </div>
       </header>
-      <section class="play">
-        <div class="canvas-wrap">
-          <div id="warning" class="warning" aria-live="polite"></div>
-          <canvas id="game" width="800" height="620" aria-label="Jogo 2D"></canvas>
-          <div id="tooltip" class="tooltip" role="status" aria-hidden="true"></div>
+
+      <section class="app" data-phase="plan">
+        <nav class="phase-nav" aria-label="Fases do nivel">
+          <button class="phase-tab is-active" type="button" data-phase="plan">Planejamento</button>
+          <button class="phase-tab" type="button" data-phase="execute">Execucao</button>
+          <button class="phase-tab" type="button" data-phase="result">Resultado</button>
+        </nav>
+
+        <div class="phase phase-plan is-active" id="phase-plan">
+          <div class="panel timeline-panel">
+            <div class="panel-header">
+              <div>
+                <h2>Linha do tempo</h2>
+                <p class="panel-subtitle">Organize as 8 horas do dia.</p>
+              </div>
+              <div class="panel-actions">
+                <button id="clear-plan" type="button" class="ghost">Limpar tudo</button>
+                <button id="start-day" type="button">Iniciar o dia</button>
+              </div>
+            </div>
+            <div id="timeline-summary" class="timeline-summary"></div>
+            <div id="timeline" class="timeline"></div>
+          </div>
+          <div class="panel task-panel">
+            <h2>Tarefas do dia</h2>
+            <p class="panel-subtitle">Arraste para ordenar (MVP).</p>
+            <ul id="task-pool" class="task-list"></ul>
+          </div>
         </div>
-        <aside class="hud">
-          <div class="stat">
-            <label>Rodada</label>
-            <span id="round">1</span>
+
+        <div class="phase phase-execute" id="phase-execute">
+          <div class="panel office-panel">
+            <canvas id="game" width="900" height="520" aria-label="Cena do escritorio"></canvas>
           </div>
-          <div class="stat">
-            <label>Fase</label>
-            <span id="phase">Selecao</span>
+          <div class="panel status-panel">
+            <h2>Execucao</h2>
+            <div class="status">
+              <span>Dia</span>
+              <strong id="day-label">1</strong>
+            </div>
+            <div class="status">
+              <span>Tarefa atual</span>
+              <strong id="current-task">-</strong>
+            </div>
+            <div class="status">
+              <span>Progresso</span>
+              <strong id="current-progress">0%</strong>
+            </div>
           </div>
-          <div class="stat">
-            <label>Dinheiro</label>
-            <span id="money">$0</span>
+        </div>
+
+        <div class="phase phase-result" id="phase-result">
+          <div class="panel result-panel">
+            <h2>Resultado do dia</h2>
+            <p id="result-summary" class="result-summary">Finalize o dia para ver o resumo.</p>
+            <div class="result-actions">
+              <button id="restart-day" type="button">Repetir dia</button>
+              <button id="next-day" type="button">Proximo dia</button>
+            </div>
           </div>
-          <div class="stat">
-            <label>Peso total</label>
-            <span id="weight">0</span>
-          </div>
-          <div class="stat">
-            <label>Bandeja</label>
-            <span id="tray">0/5</span>
-          </div>
-          <div class="stat">
-            <label>Velocidade</label>
-            <span id="speed">0</span>
-          </div>
-          <p class="hint">Clique nos objetos do topo. Segure a seta direita para andar.</p>
-        </aside>
+        </div>
       </section>
     </main>
+
     <script src="rounds.js"></script>
     <script src="game.js"></script>
   </body>

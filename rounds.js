@@ -1,32 +1,16 @@
+"use strict";
+
 window.ROUNDS = [
   {
-    items: [
-      { shape: "rect", size: 1, height: 1, value: 1, weight: 2 },
-      { shape: "rect", size: 1, height: 1, value: 1, weight: 2},
-      { shape: "rect", size: 1, height: 1, value: 1, weight: 2},
-      { shape: "rect", size: 2, height: 1, value: 10, weight: 4},
-      { shape: "rect", size: 4, height: 1, value: 50, weight: 8},
-      { shape: "rect", size: 2, height: 1, value: 2, weight: 2},
-      { shape: "rect", size: 1, height: 2, value: 10, weight: 2},
-      { shape: "rect", size: 2, height: 2, value: 20, weight: 2},
-      { shape: "rect", size: 2, height: 3, value: 5, weight: 2},
+    id: 1,
+    label: "Dia 1",
+    dayLengthHours: 8,
+    tasks: [
+      { id: "t1", title: "Planejar campanha mensal", duration: 2, relevance: 3 },
+      { id: "t2", title: "Responder emails", duration: 1, relevance: 1 },
+      { id: "t3", title: "Revisar relatorio financeiro", duration: 2, relevance: 2 },
+      { id: "t4", title: "Preparar apresentacao", duration: 2, relevance: 3 },
+      { id: "t5", title: "Atualizar planilha", duration: 1, relevance: 1 },
     ],
-    heavyLimit: 12,
-    veryHeavyLimit: 15,
-  },
-  {
-    items: [
-      { shape: "rect", size: 1, height: 2, value: 5, weight: 3 },
-      { shape: "triangle", size: 3, height: 1, value: 10 },
-      { shape: "circle", size: 1, height: 1, value: 1 },
-      { shape: "rect", size: 3, height: 2, value: 20 },
-      { shape: "triangle", size: 1, height: 1, value: 5 },
-      { shape: "circle", size: 1, height: 1, value: 10, weight: 1.5 },
-      { shape: "rect", size: 3, height: 3, value: 50, weight: 12 },
-      { shape: "triangle", size: 1, height: 2, value: 10 },
-      { shape: "circle", size: 1, height: 1, value: 20 },
-    ],
-    heavyLimit: 10,
-    veryHeavyLimit: 16,
   },
 ];

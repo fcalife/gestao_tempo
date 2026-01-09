@@ -1,615 +1,473 @@
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+"use strict";
 
-const roundEl = document.getElementById("round");
-const phaseEl = document.getElementById("phase");
-const moneyEl = document.getElementById("money");
-const weightEl = document.getElementById("weight");
-const trayEl = document.getElementById("tray");
-const speedEl = document.getElementById("speed");
-const tooltipEl = document.getElementById("tooltip");
-const warningEl = document.getElementById("warning");
+(() => {
+  const rounds = Array.isArray(window.ROUNDS) ? window.ROUNDS : [];
+  const round = rounds[0] || { id: 1, label: "Dia 1", dayLengthHours: 8, tasks: [] };
 
-const bounds = {
-  width: canvas.width,
-  height: canvas.height,
-};
+  const phaseTabs = Array.from(document.querySelectorAll(".phase-tab"));
+  const phases = Array.from(document.querySelectorAll(".phase"));
+  const taskPoolEl = document.getElementById("task-pool");
+  const timelineEl = document.getElementById("timeline");
+  const timelineSummary = document.getElementById("timeline-summary");
+  const startDayBtn = document.getElementById("start-day");
+  const clearPlanBtn = document.getElementById("clear-plan");
+  const dayLabel = document.getElementById("day-label");
+  const currentTask = document.getElementById("current-task");
+  const currentProgress = document.getElementById("current-progress");
+  const resultSummary = document.getElementById("result-summary");
+  const restartDayBtn = document.getElementById("restart-day");
+  const nextDayBtn = document.getElementById("next-day");
+  const canvas = document.getElementById("game");
 
-const layout = {
-  shelfMarginX: 50,
-  shelfY: 110,
-  shelfGapX: 75,
-  shelfGapY: 80,
-  shelfLineY: 60,
-  waiterY: 450,
-  trayOffsetY: -70,
-  trayItemScale: 0.8,
-  traySlot: 16,
-  trayLineWidth: 4,
-  trayLength: 16 * 9,
-};
-
-const shapes = ["rect", "triangle", "circle"];
-const values = [1, 5, 10, 20, 50];
-const shapeColors = {
-  rect: "#778beb",
-  triangle: "#e77f67",
-  circle: "#cf6a87",
-};
-
-const waiter = {
-  x: 60,
-  y: layout.waiterY,
-  startX: 60,
-  targetX: bounds.width - 140,
-  baseSpeed: 90,
-  sprintSpeed: 160,
-};
-
-const waiterImg = new Image();
-let waiterImgReady = false;
-const waiterSpriteHeight = 184;
-waiterImg.onload = () => {
-  waiterImgReady = true;
-};
-waiterImg.src = "assets/waiter.png";
-
-let round = 1;
-let totalMoney = 0;
-let phase = "select";
-let available = [];
-let tray = [];
-let lastTime = 0;
-let resultTimer = 0;
-let nextId = 1;
-let movingRight = false;
-let lastGain = 0;
-let ignoreRightUntilRelease = false;
-const pressedKeys = new Set();
-let warningTimer = 0;
-let warningMessage = "";
-let warningFlashTimer = 0;
-let speedLines = [];
-let speedLinesReady = false;
-let heavyLimit = null;
-let veryHeavyLimit = null;
-
-const getItemWeight = (item) => {
-  if (typeof item.weight === "number") return item.weight;
-  return getShapeWeight(item.shape, item.size, item.height).weight;
-};
-
-const getTrayWeight = () => tray.reduce((sum, item) => sum + getItemWeight(item), 0);
-
-const getTrayValue = () => tray.reduce((sum, item) => sum + item.value, 0);
-
-const getTraySlots = () => tray.reduce((sum, item) => sum + item.size, 0);
-
-const getTrayShake = () => {
-  if (phase !== "select") return 0;
-  if (typeof heavyLimit !== "number") return 0;
-  const total = getTrayWeight();
-  if (typeof veryHeavyLimit === "number" && total > veryHeavyLimit) return 2;
-  if (total > heavyLimit) return 0.8;
-  return 0;
-};
-
-const isSprinting = () =>
-  phase === "walk" && movingRight && (pressedKeys.has("ShiftLeft") || pressedKeys.has("ShiftRight"));
-
-const getSpeed = () => {
-  if (isSprinting()) {
-    return waiter.sprintSpeed;
-  }
-  return waiter.baseSpeed;
-};
-
-const updateHud = () => {
-  roundEl.textContent = round;
-  phaseEl.textContent =
-    phase === "select" ? "Selecao" : phase === "walk" ? "Travessia" : "Resultado";
-  moneyEl.textContent = `$${totalMoney}`;
-  weightEl.textContent = getTrayWeight();
-  trayEl.textContent = `${getTraySlots()}/9`;
-};
-
-const updateSpeedDisplay = () => {
-  speedEl.textContent = `${Math.round(getSpeed())}`;
-};
-
-const makeItem = (preset = null) => {
-  const shape = preset?.shape ?? shapes[Math.floor(Math.random() * shapes.length)];
-  const size = preset?.size ?? (Math.random() < 0.5 ? 1 : 3);
-  let height = preset?.height ?? (1 + Math.floor(Math.random() * 3));
-  if (shape === "circle") {
-    height = 1;
-  }
-  const value = preset?.value ?? values[Math.floor(Math.random() * values.length)];
-  const weight = typeof preset?.weight === "number" ? preset.weight : null;
-  return {
-    id: nextId++,
-    shape,
-    size,
-    height,
-    value,
-    weight,
-    box: null,
+  const state = {
+    phase: "plan",
+    day: round,
+    tasks: round.tasks.map((task) => ({ ...task })),
+    plannedSlots: Array(round.dayLengthHours || 8).fill(null),
+    placements: new Map(),
+    plannedOrder: [],
+    execution: {
+      schedule: [],
+      totalHours: round.dayLengthHours || 8,
+      elapsedHours: 0,
+      taskIndex: 0,
+      taskElapsed: 0,
+      productivity: 0,
+      running: false,
+      lastTimestamp: 0,
+    },
   };
-};
 
-const generateItems = (roundConfig = null) => {
-  if (roundConfig?.items?.length) {
-    return roundConfig.items.map((item) => makeItem(item));
-  }
-  const count = 9;
-  const items = [];
-  for (let i = 0; i < count; i += 1) {
-    items.push(makeItem());
-  }
-  return items;
-};
+  const TIME_SCALE = 0.25;
+  const TIMELINE_UNIT = 50;
 
-const startRound = () => {
-  const roundIdx = round - 1;
-  const roundConfig =
-    Array.isArray(window.ROUNDS) && window.ROUNDS.length
-      ? window.ROUNDS[roundIdx % window.ROUNDS.length]
-      : null;
-  phase = "select";
-  available = generateItems(roundConfig);
-  tray = [];
-  waiter.x = waiter.startX;
-  resultTimer = 0;
-  movingRight = false;
-  ignoreRightUntilRelease = pressedKeys.has("ArrowRight");
-  heavyLimit = roundConfig?.heavyLimit ?? null;
-  veryHeavyLimit = roundConfig?.veryHeavyLimit ?? null;
-  updateHud();
-};
+  const setPhase = (phase) => {
+    state.phase = phase;
+    phaseTabs.forEach((tab) => {
+      tab.classList.toggle("is-active", tab.dataset.phase === phase);
+    });
+    phases.forEach((section) => {
+      section.classList.toggle("is-active", section.id === `phase-${phase}`);
+    });
+  };
 
-const showWarning = (message) => {
-  warningMessage = message;
-  warningTimer = 1.5;
-  if (warningEl) {
-    warningEl.textContent = message;
-    warningEl.classList.add("is-visible");
-    warningEl.classList.remove("flash");
-    void warningEl.offsetWidth;
-    warningEl.classList.add("flash");
-    warningFlashTimer = 0.2;
-  }
-};
-
-const pointInBox = (pos, box) =>
-  pos.x >= box.x && pos.x <= box.x + box.w && pos.y >= box.y && pos.y <= box.y + box.h;
-
-const getHoveredItem = (pos) => {
-  for (let i = tray.length - 1; i >= 0; i -= 1) {
-    const item = tray[i];
-    if (item.box && pointInBox(pos, item.box)) {
-      return item;
-    }
-  }
-  for (let i = available.length - 1; i >= 0; i -= 1) {
-    const item = available[i];
-    if (item.box && pointInBox(pos, item.box)) {
-      return item;
-    }
-  }
-  return null;
-};
-
-const formatTooltip = (item) => {
-  const weight = getItemWeight(item);
-  return `Forma: ${item.shape}\nTamanho: ${item.size}\nAltura: ${item.height}\nPeso: ${weight}\nValor: $${item.value}`;
-};
-
-const showTooltip = (item, event) => {
-  if (!tooltipEl) return;
-  tooltipEl.textContent = formatTooltip(item);
-  tooltipEl.classList.add("is-visible");
-  tooltipEl.setAttribute("aria-hidden", "false");
-
-  const rect = canvas.getBoundingClientRect();
-  const offsetX = 12;
-  const offsetY = 12;
-  let x = event.clientX - rect.left + offsetX;
-  let y = event.clientY - rect.top + offsetY;
-  const maxX = rect.width - tooltipEl.offsetWidth - 8;
-  const maxY = rect.height - tooltipEl.offsetHeight - 8;
-  if (Number.isFinite(maxX)) {
-    x = Math.min(Math.max(8, x), Math.max(8, maxX));
-  }
-  if (Number.isFinite(maxY)) {
-    y = Math.min(Math.max(8, y), Math.max(8, maxY));
-  }
-  tooltipEl.style.left = `${x}px`;
-  tooltipEl.style.top = `${y}px`;
-};
-
-const hideTooltip = () => {
-  if (!tooltipEl) return;
-  tooltipEl.classList.remove("is-visible");
-  tooltipEl.setAttribute("aria-hidden", "true");
-};
-
-const getShapeDims = (shape, base, height) => {
-  const scale = 16;
-  if (shape === "rect") return { w: base * scale, h: height * scale };
-  if (shape === "triangle") return { w: base * scale, h: height * scale };
-  return { w: base * scale, h: height * scale };
-};
-
-const getShapeWeight = (shape, base, height) => {
-  if (shape === "circle") return { weight: 0.75 * base * height };
-  if (shape === "triangle") return { weight: 0.5 * base * height };
-  return { weight: base * height };
-};
-
-const drawShapePath = (shape, x, y, w, h) => {
-  if (shape === "triangle") {
-    ctx.moveTo(x, y - h / 2);
-    ctx.lineTo(x - w / 2, y + h / 2);
-    ctx.lineTo(x + w / 2, y + h / 2);
-    ctx.closePath();
-    return;
-  }
-  if (shape === "circle") {
-    ctx.arc(x, y, w / 2, 0, Math.PI * 2);
-    return;
-  }
-  ctx.rect(x - w / 2, y - h / 2, w, h);
-};
-
-const getItemDims = (item, scale = 1) => {
-  return getShapeDims(item.shape, item.size, item.height);
-};
-
-const drawItemAt = (item, x, y, dims, showValue) => {
-  const { w, h } = dims;
-  const box = { x: x - w / 2, y: y - h / 2, w, h };
-
-  ctx.beginPath();
-  drawShapePath(item.shape, x, y, w, h);
-  ctx.fillStyle = shapeColors[item.shape] || "#ffffff";
-  ctx.fill();
-
-  ctx.strokeStyle = "#111111";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  drawShapePath(item.shape, x, y, w, h);
-  ctx.stroke();
-
-  if (showValue) {
-    ctx.fillStyle = "#111111";
-    ctx.font = "bold 16px Trebuchet MS";
-    ctx.textAlign = "center";
-    ctx.fillText(`$${item.value}`, x, y + h / 2 + 16);
-  }
-
-  item.box = box;
-};
-
-const drawItem = (item, x, y, showValue, scale = 1) => {
-  const dims = getItemDims(item, scale);
-  drawItemAt(item, x, y, dims, showValue);
-};
-
-const drawItemFromBottomLeft = (item, x, y, showValue, scale = 1) => {
-  const dims = getItemDims(item, scale);
-  drawItemAt(item, x + dims.w / 2, y - dims.h / 2, dims, showValue);
-};
-
-const getWaiterSprite = () => {
-  if (!waiterImgReady || !waiterImg.naturalHeight) {
-    return { w: 140, h: waiterSpriteHeight };
-  }
-  const scale = waiterSpriteHeight / waiterImg.naturalHeight;
-  return { w: waiterImg.naturalWidth * scale, h: waiterSpriteHeight };
-};
-
-const drawWaiter = () => {
-  const sprite = getWaiterSprite();
-  const floorY = layout.waiterY + 40;
-  const footY = floorY;
-  const trayY = footY - sprite.h * 0.7 - 32;
-  const handX = waiter.x + sprite.w * 0.12;
-  const trayStart = handX - 17;
-  const trayEnd = trayStart + layout.trayLength;
-
-  if (waiterImgReady) {
-    ctx.save();
-    ctx.translate(waiter.x, footY);
-    ctx.scale(-1, 1);
-    ctx.drawImage(waiterImg, -sprite.w / 2, -sprite.h, sprite.w, sprite.h);
-    ctx.restore();
-  } else {
-    ctx.fillStyle = "#ffffff";
-    ctx.strokeStyle = "#111111";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(waiter.x - sprite.w / 2, footY - sprite.h, sprite.w, sprite.h);
-  }
-
-  ctx.strokeStyle = "#111111";
-  ctx.lineWidth = layout.trayLineWidth;
-  ctx.beginPath();
-  ctx.moveTo(trayStart, trayY);
-  ctx.lineTo(trayEnd, trayY);
-  ctx.stroke();
-
-  let slotCursor = 0;
-  const shake = getTrayShake();
-  tray.forEach((item) => {
-    const itemX = trayStart + slotCursor * layout.traySlot;
-    const trayTop = trayY - layout.trayLineWidth / 2;
-    const jitterX = shake ? (Math.random() * 2 - 1) * shake : 0;
-    const jitterY = shake ? (Math.random() * 2 - 1) * shake : 0;
-    drawItemFromBottomLeft(
-      item,
-      itemX + jitterX,
-      trayTop + jitterY,
-      false,
-      layout.trayItemScale
-    );
-    slotCursor += item.size;
-  });
-};
-
-const drawShelf = () => {
-};
-
-const drawAvailable = () => {
-  const usable = bounds.width - layout.shelfMarginX * 2;
-  const cols = Math.max(1, Math.floor(usable / layout.shelfGapX));
-  const sorted = [...available].sort((a, b) => {
-    const areaA = a.size * a.height;
-    const areaB = b.size * b.height;
-    if (areaA !== areaB) return areaB - areaA;
-    return b.height - a.height;
-  });
-  const rowMaxHeights = [];
-  sorted.forEach((item, index) => {
-    const row = Math.floor(index / cols);
-    const dims = getItemDims(item, 1);
-    rowMaxHeights[row] = Math.max(rowMaxHeights[row] ?? 0, dims.h);
-  });
-  sorted.forEach((item, index) => {
-    const col = index % cols;
-    const row = Math.floor(index / cols);
-    const x = layout.shelfMarginX + col * layout.shelfGapX;
-    const dims = getItemDims(item, 1);
-    const rowTop = layout.shelfY + row * layout.shelfGapY;
-    const rowBottom = rowTop + (rowMaxHeights[row] ?? 0);
-    const y = rowBottom - dims.h / 2;
-    drawItem(item, x, y, true);
-  });
-};
-
-const drawPhaseLabel = () => {
-  if (phase === "select") return;
-  ctx.fillStyle = "#111111";
-  ctx.font = "14px Trebuchet MS";
-  ctx.textAlign = "right";
-  const label = phase === "walk" ? "Travessia em andamento" : "Rodada concluida";
-  ctx.fillText(label, bounds.width - 20, 30);
-};
-
-const drawResultCelebration = () => {
-  if (phase !== "result") return;
-  const alpha = Math.min(1, resultTimer * 2);
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.fillStyle = "#ffffff";
-  ctx.strokeStyle = "#111111";
-  ctx.lineWidth = 2;
-  const boxW = 260;
-  const boxH = 70;
-  const x = bounds.width / 2 - boxW / 2;
-  const y = 70;
-  ctx.fillRect(x, y, boxW, boxH);
-  ctx.strokeRect(x, y, boxW, boxH);
-  ctx.fillStyle = "#111111";
-  ctx.textAlign = "center";
-  ctx.font = "16px Trebuchet MS";
-  ctx.fillText("Rodada concluida!", bounds.width / 2, y + 30);
-  ctx.font = "14px Trebuchet MS";
-  ctx.fillText(`Voce ganhou $${lastGain}`, bounds.width / 2, y + 52);
-  ctx.restore();
-};
-
-const update = (dt) => {
-  if (phase === "walk") {
-    if (movingRight) {
-      waiter.x += getSpeed() * dt;
-    }
-    if (waiter.x >= waiter.targetX) {
-      lastGain = getTrayValue();
-      totalMoney += lastGain;
-      phase = "result";
-      resultTimer = 1.0;
-      movingRight = false;
-      updateHud();
-    }
-  } else if (phase === "result") {
-    resultTimer -= dt;
-    if (resultTimer <= 0) {
-      round += 1;
-      startRound();
-    }
-  }
-  if (warningTimer > 0) {
-    warningTimer -= dt;
-    if (warningTimer <= 0) {
-      warningTimer = 0;
-      warningMessage = "";
-      if (warningEl) {
-        warningEl.textContent = "";
-        warningEl.classList.remove("is-visible");
+  const renderTaskPool = () => {
+    if (!taskPoolEl) return;
+    taskPoolEl.innerHTML = "";
+    state.tasks.forEach((task) => {
+      const item = document.createElement("li");
+      item.className = "task-item";
+      if (state.placements.has(task.id)) {
+        item.classList.add("is-assigned");
       }
+      item.style.setProperty("--task-hours", `${task.duration}`);
+      item.innerHTML = `
+        <div class="task-title">${task.title}</div>
+      `;
+      if (task.relevance === 3) {
+        item.classList.add("is-urgent");
+        const alert = document.createElement("span");
+        alert.className = "task-alert";
+        alert.textContent = "!";
+        const tooltip = document.createElement("span");
+        tooltip.className = "task-tooltip";
+        tooltip.textContent = "Tarefa Importante";
+        alert.appendChild(tooltip);
+        item.appendChild(alert);
+      }
+      item.draggable = true;
+      item.dataset.taskId = task.id;
+      item.addEventListener("dragstart", (event) => {
+        item.classList.add("is-dragging");
+        event.dataTransfer?.setData("text/plain", task.id);
+      });
+      item.addEventListener("dragend", () => {
+        item.classList.remove("is-dragging");
+      });
+      taskPoolEl.appendChild(item);
+    });
+    fitTaskTitles();
+  };
+
+  const flashInvalid = (slotEl) => {
+    if (!slotEl) return;
+    slotEl.classList.add("is-invalid");
+    window.setTimeout(() => slotEl.classList.remove("is-invalid"), 300);
+  };
+
+  const rebuildPlannedSlots = () => {
+    state.plannedSlots = Array(state.day.dayLengthHours || 8).fill(null);
+    state.placements.clear();
+    let cursor = 0;
+    state.plannedOrder.forEach((taskId) => {
+      const task = state.tasks.find((item) => item.id === taskId);
+      if (!task) return;
+      for (let i = cursor; i < cursor + task.duration; i += 1) {
+        if (i >= state.plannedSlots.length) return;
+        state.plannedSlots[i] = taskId;
+      }
+      state.placements.set(taskId, cursor);
+      cursor += task.duration;
+    });
+  };
+
+  const removeTaskFromTimeline = (taskId) => {
+    const index = state.plannedOrder.indexOf(taskId);
+    if (index === -1) return;
+    state.plannedOrder.splice(index, 1);
+    rebuildPlannedSlots();
+  };
+
+  const canAppendTask = (task) => {
+    const totalSlots = state.day.dayLengthHours || 8;
+    const usedSlots = state.plannedOrder.reduce((sum, id) => {
+      const plannedTask = state.tasks.find((item) => item.id === id);
+      return sum + (plannedTask ? plannedTask.duration : 0);
+    }, 0);
+    return usedSlots + task.duration <= totalSlots;
+  };
+
+  const appendTask = (taskId, slotEl) => {
+    const task = state.tasks.find((item) => item.id === taskId);
+    if (!task) return;
+    removeTaskFromTimeline(taskId);
+    if (!canAppendTask(task)) {
+      flashInvalid(slotEl);
+      return;
     }
-  }
-  if (warningFlashTimer > 0) {
-    warningFlashTimer -= dt;
-    if (warningFlashTimer <= 0 && warningEl) {
-      warningEl.classList.remove("flash");
-    }
-  }
-  if (isSprinting()) {
-    if (!speedLinesReady) {
-      speedLines = Array.from({ length: 22 }, () => ({
-        x: Math.random() * bounds.width,
-        y: 30 + Math.random() * (bounds.height - 140),
-        len: 50 + Math.random() * 70,
-        speed: 520 + Math.random() * 180,
-      }));
-      speedLinesReady = true;
-    }
-    speedLines.forEach((line) => {
-      line.x -= line.speed * dt;
-      if (line.x + line.len < 0) {
-        line.x = bounds.width + Math.random() * 80;
-        line.y = 30 + Math.random() * (bounds.height - 140);
-        line.len = 50 + Math.random() * 70;
-        line.speed = 520 + Math.random() * 180;
+    state.plannedOrder.push(taskId);
+    rebuildPlannedSlots();
+  };
+
+  const renderTimeline = () => {
+    if (!timelineEl) return;
+    timelineEl.innerHTML = "";
+    const totalSlots = state.day.dayLengthHours || 8;
+    timelineEl.style.minWidth = `${totalSlots * TIMELINE_UNIT}px`;
+    let cursor = 0;
+    state.plannedOrder.forEach((taskId) => {
+      const task = state.tasks.find((item) => item.id === taskId);
+      if (!task) return;
+      const slot = document.createElement("div");
+      slot.className = "timeline-slot";
+      slot.classList.add("is-span");
+      slot.style.setProperty("--task-hours", `${task.duration}`);
+      if (cursor > 0) {
+        slot.classList.add("is-joined-left");
+      }
+      if (cursor + task.duration < totalSlots) {
+        slot.classList.add("is-joined-right");
+      }
+      const taskCard = document.createElement("div");
+      taskCard.className = "timeline-task";
+      taskCard.draggable = true;
+      taskCard.dataset.taskId = taskId;
+      taskCard.innerHTML = `
+        <div class="task-title">${task.title}</div>
+      `;
+      if (task.relevance === 3) {
+        taskCard.classList.add("is-urgent");
+        const alert = document.createElement("span");
+        alert.className = "task-alert";
+        alert.textContent = "!";
+        const tooltip = document.createElement("span");
+        tooltip.className = "task-tooltip";
+        tooltip.textContent = "Tarefa Importante";
+        alert.appendChild(tooltip);
+        taskCard.appendChild(alert);
+      }
+      taskCard.addEventListener("dragstart", (event) => {
+        taskCard.classList.add("is-dragging");
+        event.dataTransfer?.setData("text/plain", taskId);
+      });
+      taskCard.addEventListener("dragend", () => {
+        taskCard.classList.remove("is-dragging");
+      });
+      slot.appendChild(taskCard);
+      timelineEl.appendChild(slot);
+      cursor += task.duration;
+    });
+    fitTaskTitles();
+  };
+
+  const fitTaskTitles = () => {
+    const titles = document.querySelectorAll(".task-title");
+    titles.forEach((title) => {
+      title.style.fontSize = "";
+      const baseSize = parseFloat(window.getComputedStyle(title).fontSize);
+      let size = Number.isFinite(baseSize) ? baseSize : 14;
+      while (title.scrollWidth > title.clientWidth && size > 10) {
+        size -= 1;
+        title.style.fontSize = `${size}px`;
       }
     });
-  }
-  updateSpeedDisplay();
-};
+  };
 
-const render = () => {
-  ctx.clearRect(0, 0, bounds.width, bounds.height);
+  const updatePlanningSummary = () => {
+    const usedSlots = state.plannedOrder.reduce((sum, taskId) => {
+      const task = state.tasks.find((item) => item.id === taskId);
+      return sum + (task ? task.duration : 0);
+    }, 0);
+    const totalSlots = state.day.dayLengthHours || 8;
+    const allPlaced = state.tasks.every((task) => state.plannedOrder.includes(task.id));
+    if (timelineSummary) {
+      timelineSummary.textContent = `Horas planejadas: ${usedSlots}/${totalSlots}`;
+    }
+    if (startDayBtn) {
+      startDayBtn.disabled = !(usedSlots === totalSlots && allPlaced);
+    }
+  };
 
-  if (isSprinting() && speedLinesReady) {
-    ctx.save();
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.18)";
+  const resetPlanning = () => {
+    state.plannedOrder = [];
+    rebuildPlannedSlots();
+    renderTaskPool();
+    renderTimeline();
+    updatePlanningSummary();
+  };
+
+  const buildSchedule = () => {
+    const schedule = [];
+    state.plannedSlots.forEach((taskId, index) => {
+      if (!taskId) return;
+      const isStart = state.placements.get(taskId) === index;
+      if (!isStart) return;
+      const task = state.tasks.find((item) => item.id === taskId);
+      if (!task) return;
+      schedule.push(task);
+    });
+    return schedule;
+  };
+
+  const startExecution = () => {
+    state.execution.schedule = buildSchedule();
+    state.execution.totalHours = state.day.dayLengthHours || 8;
+    state.execution.elapsedHours = 0;
+    state.execution.taskIndex = 0;
+    state.execution.taskElapsed = 0;
+    state.execution.productivity = 0;
+    state.execution.running = true;
+    state.execution.lastTimestamp = 0;
+    setPhase("execute");
+  };
+
+  const finishExecution = () => {
+    state.execution.running = false;
+    const productivity = Math.round(state.execution.productivity * 10) / 10;
+    if (resultSummary) {
+      resultSummary.textContent = `Produtividade total: ${productivity} pontos.`;
+    }
+    setPhase("result");
+  };
+
+  const updateExecution = (dt) => {
+    const exec = state.execution;
+    if (!exec.running) return;
+    let remaining = dt * TIME_SCALE;
+    while (remaining > 0 && exec.taskIndex < exec.schedule.length) {
+      const task = exec.schedule[exec.taskIndex];
+      const taskRemaining = task.duration - exec.taskElapsed;
+      const step = Math.min(taskRemaining, remaining);
+      exec.taskElapsed += step;
+      exec.elapsedHours += step;
+      exec.productivity += step * task.relevance;
+      remaining -= step;
+      if (exec.taskElapsed >= task.duration - 1e-6) {
+        exec.taskIndex += 1;
+        exec.taskElapsed = 0;
+      }
+    }
+
+    if (exec.elapsedHours >= exec.totalHours || exec.taskIndex >= exec.schedule.length) {
+      finishExecution();
+    }
+  };
+
+  const updateExecutionStatus = () => {
+    const exec = state.execution;
+    if (dayLabel) dayLabel.textContent = state.day.label || "Dia 1";
+    const task = exec.schedule[exec.taskIndex];
+    if (currentTask) currentTask.textContent = task ? task.title : "-";
+    if (currentProgress) {
+      if (task) {
+        const pct = Math.min(100, Math.round((exec.taskElapsed / task.duration) * 100));
+        currentProgress.textContent = `${pct}%`;
+      } else {
+        currentProgress.textContent = "0%";
+      }
+    }
+  };
+
+  const drawSketchLine = (ctx, x1, y1, x2, y2) => {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+  };
+
+  const drawSketchRect = (ctx, x, y, w, h) => {
+    drawSketchLine(ctx, x, y, x + w, y);
+    drawSketchLine(ctx, x + w, y, x + w, y + h);
+    drawSketchLine(ctx, x + w, y + h, x, y + h);
+    drawSketchLine(ctx, x, y + h, x, y);
+  };
+
+  const drawStickFigure = (ctx, x, y, scale, tick) => {
+    const head = 10 * scale;
+    ctx.strokeStyle = "#3b312a";
+    ctx.lineWidth = 1.6;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.arc(x, y - 22 * scale, head, 0, Math.PI * 2);
+    ctx.stroke();
+    drawSketchLine(ctx, x, y - 12 * scale, x, y + 18 * scale, 0.9);
+    const armOffset = Math.sin(tick * 6) * 4 * scale;
+    drawSketchLine(ctx, x, y - 2 * scale, x - 14 * scale, y + 6 * scale + armOffset, 0.9);
+    drawSketchLine(ctx, x, y - 2 * scale, x + 14 * scale, y + 6 * scale - armOffset, 0.9);
+    drawSketchLine(ctx, x, y + 18 * scale, x - 10 * scale, y + 36 * scale, 0.9);
+    drawSketchLine(ctx, x, y + 18 * scale, x + 10 * scale, y + 36 * scale, 0.9);
+  };
+
+  const renderOffice = (tick) => {
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#fcf7f1";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = "rgba(77, 66, 58, 0.12)";
     ctx.lineWidth = 1;
-    speedLines.forEach((line) => {
-      ctx.beginPath();
-      ctx.moveTo(line.x, line.y);
-      ctx.lineTo(line.x + line.len, line.y);
-      ctx.stroke();
+    for (let y = 24; y < canvas.height; y += 28) {
+      drawSketchLine(ctx, 12, y, canvas.width - 12, y, 0.6, 1);
+    }
+    ctx.strokeStyle = "rgba(219, 160, 156, 0.35)";
+    drawSketchLine(ctx, 80, 12, 80, canvas.height - 12, 0.6, 1);
+
+    ctx.strokeStyle = "#7d6a5d";
+    ctx.lineWidth = 1.6;
+    const floorY = canvas.height - 90;
+    drawSketchLine(ctx, 40, floorY+50, canvas.width - 40, floorY+50, 1.4);
+
+    const deskX = canvas.width * 0.35;
+    const deskY = floorY - 28;
+    const deskW = canvas.width * 0.28;
+    const deskH = 18;
+    drawSketchRect(ctx, deskX, deskY, deskW, deskH);
+    drawSketchLine(ctx, deskX + 20, deskY + deskH, deskX + 20, floorY + 52);
+    drawSketchLine(ctx, deskX + deskW - 20, deskY + deskH, deskX + deskW - 20, floorY + 52);
+
+    const towerX = deskX + deskW - 34;
+    const towerY = deskY - 62;
+    drawSketchRect(ctx, towerX, towerY, 32, 58);
+    drawSketchLine(ctx, towerX + 8, towerY + 16, towerX + 24, towerY + 16);
+    drawSketchLine(ctx, towerX + 8, towerY + 30, towerX + 24, towerY + 30);
+
+    const monitorX = deskX + deskW - 130;
+    const monitorY = deskY - 74;
+    drawSketchRect(ctx, monitorX, monitorY, 90, 54);
+    drawSketchLine(ctx, monitorX + 36, monitorY + 54, monitorX + 54, monitorY + 72);
+    drawSketchLine(ctx, monitorX + 24, monitorY + 72, monitorX + 66, monitorY + 72);
+
+    // const chairX = deskX + deskW / 2;
+    // drawSketchRect(ctx, chairX - 16, floorY - 26, 32, 16);
+    // drawSketchRect(ctx, chairX - 20, floorY - 58, 40, 28);
+
+    drawStickFigure(ctx, deskX + 80, floorY -20, 2, tick);
+  };
+
+  const updateStatus = () => {
+    if (resultSummary) {
+      resultSummary.textContent = "Finalize o dia para ver o resumo.";
+    }
+  };
+
+  const loop = (timestamp) => {
+    const exec = state.execution;
+    if (!exec.lastTimestamp) exec.lastTimestamp = timestamp;
+    const dt = Math.min((timestamp - exec.lastTimestamp) / 1000, 0.1);
+    exec.lastTimestamp = timestamp;
+    if (state.phase === "execute") {
+      updateExecution(dt);
+      updateExecutionStatus();
+    }
+    renderOffice(timestamp / 1000);
+    requestAnimationFrame(loop);
+  };
+
+  phaseTabs.forEach((tab) => {
+    tab.addEventListener("click", () => setPhase(tab.dataset.phase));
+  });
+
+  if (taskPoolEl) {
+    taskPoolEl.addEventListener("dragover", (event) => {
+      event.preventDefault();
     });
-    ctx.restore();
+    taskPoolEl.addEventListener("drop", (event) => {
+      event.preventDefault();
+      const taskIdDropped = event.dataTransfer?.getData("text/plain");
+      if (!taskIdDropped) return;
+      removeTaskFromTimeline(taskIdDropped);
+      renderTaskPool();
+      renderTimeline();
+      updatePlanningSummary();
+    });
   }
 
-  const floorY = layout.waiterY + 40;
-  ctx.strokeStyle = "#111111";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, floorY);
-  ctx.lineTo(bounds.width, floorY);
-  ctx.stroke();
-
-  if (phase === "select") {
-    drawShelf();
-    drawAvailable();
+  if (timelineEl) {
+    timelineEl.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      timelineEl.classList.add("is-drop");
+    });
+    timelineEl.addEventListener("dragleave", () => {
+      timelineEl.classList.remove("is-drop");
+    });
+    timelineEl.addEventListener("drop", (event) => {
+      event.preventDefault();
+      timelineEl.classList.remove("is-drop");
+      const taskIdDropped = event.dataTransfer?.getData("text/plain");
+      if (!taskIdDropped) return;
+      appendTask(taskIdDropped, timelineEl);
+      renderTaskPool();
+      renderTimeline();
+      updatePlanningSummary();
+    });
   }
 
-  drawWaiter();
-  drawPhaseLabel();
-  drawResultCelebration();
-};
+  if (startDayBtn) {
+    startDayBtn.disabled = true;
+    startDayBtn.addEventListener("click", () => {
+      startExecution();
+    });
+  }
 
-const loop = (timestamp) => {
-  const dt = Math.min((timestamp - lastTime) / 1000, 0.04);
-  lastTime = timestamp;
-  update(dt);
-  render();
+  if (clearPlanBtn) {
+    clearPlanBtn.addEventListener("click", () => {
+      resetPlanning();
+    });
+  }
+
+  if (restartDayBtn) {
+    restartDayBtn.addEventListener("click", () => {
+      resetPlanning();
+      updateStatus();
+      setPhase("plan");
+    });
+  }
+
+  if (nextDayBtn) {
+    nextDayBtn.addEventListener("click", () => {
+      resetPlanning();
+      updateStatus();
+      setPhase("plan");
+    });
+  }
+
+  renderTaskPool();
+  renderTimeline();
+  updatePlanningSummary();
+  renderOffice(0);
+  updateStatus();
+  updateExecutionStatus();
   requestAnimationFrame(loop);
-};
-
-const startWalk = () => {
-  if (phase !== "select") return;
-  phase = "walk";
-  waiter.x = waiter.startX;
-  updateHud();
-};
-
-const onCanvasClick = (event) => {
-  if (phase !== "select") return;
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
-  const pos = {
-    x: (event.clientX - rect.left) * scaleX,
-    y: (event.clientY - rect.top) * scaleY,
-  };
-
-  for (let i = tray.length - 1; i >= 0; i -= 1) {
-    const item = tray[i];
-    if (item.box && pointInBox(pos, item.box)) {
-      tray.splice(i, 1);
-      available.push(item);
-      updateHud();
-      return;
-    }
-  }
-
-  for (let i = 0; i < available.length; i += 1) {
-    const item = available[i];
-    if (item.box && pointInBox(pos, item.box)) {
-      if (getTraySlots() + item.size > 9) {
-        showWarning("Bandeja muito cheia!");
-        return;
-      }
-      available.splice(i, 1);
-      tray.push(item);
-      updateHud();
-      return;
-    }
-  }
-};
-
-const onKeyDown = (event) => {
-  pressedKeys.add(event.code);
-  if (event.code !== "ArrowRight") return;
-  event.preventDefault();
-  if (ignoreRightUntilRelease) return;
-  if (phase === "select") {
-    startWalk();
-  }
-  if (phase === "walk") {
-    movingRight = true;
-  }
-};
-
-const onKeyUp = (event) => {
-  pressedKeys.delete(event.code);
-  if (event.code !== "ArrowRight") return;
-  event.preventDefault();
-  movingRight = false;
-  if (ignoreRightUntilRelease) {
-    ignoreRightUntilRelease = false;
-  }
-};
-
-const onCanvasMove = (event) => {
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
-  const pos = {
-    x: (event.clientX - rect.left) * scaleX,
-    y: (event.clientY - rect.top) * scaleY,
-  };
-  const item = getHoveredItem(pos);
-  if (!item) {
-    hideTooltip();
-    return;
-  }
-  showTooltip(item, event);
-};
-
-canvas.addEventListener("click", onCanvasClick);
-canvas.addEventListener("mousemove", onCanvasMove);
-canvas.addEventListener("mouseleave", hideTooltip);
-window.addEventListener("keydown", onKeyDown);
-window.addEventListener("keyup", onKeyUp);
-window.addEventListener("blur", () => {
-  pressedKeys.clear();
-  movingRight = false;
-  ignoreRightUntilRelease = false;
-});
-
-startRound();
-requestAnimationFrame(loop);
+})();

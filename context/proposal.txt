@@ -1,0 +1,68 @@
+Minha proposta de jogo educacional é a seguinte:
+
+O jogo consiste de vários níveis, com dificuldade crescente. De forma geral, ele consiste num personagem, que representa o jogador, trabalhando num escritório, completando tarefas.
+
+Os primeiros níveis, mais simples, acontecem ao longo de um único dia. Os níveis subsequentes acontecem ao longo de uma semana inteira (5 dias úteis).
+
+Em cada nível, o jogo transcorre em 3 fases distintas:
+
+FASE 1: preparação e planejamento
+
+Nesta fase, é apresentada ao jogador uma lista de tarefas que ele deve realizar naquele dia (ou semana). Cabe a ele arrastar as tarefas, apresentadas de forma desorganizada, para uma linha do tempo, que mostra a ordem em que elas serão realizadas.
+
+Uma vez que o jogador terminou de organizar as tarefas na linha do tempo planejada para o dia, ele pode clicar em "iniciar o dia", e o seu personagem vai começar a "trabalhar", executando as tarefas planejadas, em ordem.
+
+FASE 2: Execução
+
+Durante esta fase do jogo, o personagem trabalha em seu computador, no escritório da sua empresa. Pode-se ver ele digitando em seu teclado. Enquanto o personagem está trabalhando, ele vai acumulando, com o tempo, um valor chamado "produtividade". Produtividade é o objetivo final do jogo, e a métrica pela qual o jogador é avaliado.
+
+FASE 3: Avaliação
+
+Ao final de cada dia, o total de produtividade gerado durante o dia é medido, e avaliado contra o objetivo do dia. Se o usuário conseguir alcançar o objetivo, ele tem sucesso, e passa para o próximo dia. Cada nível do jogo pode consistir de um dia, ou vários deles. Se não conseguir alcançar a produtividade necessária após o final do nível, o jogador tem que repetir ele de novo, desde o começo.
+
+OUTROS ELEMENTOS:
+
+Outros elementos do jogo são cruciais para complementar a experiência, e fazer com que o jogador realmente atinja os objetivos de apendizado.
+
+FOCO
+
+Foco é um valor numérico, denotado visualmente por uma barra de progresso que enche gradualmente, do quanto o "funcionário" (o personagem do jogador) está concentrado na sua tarefa. De forma geral, durante um dia de trabalho, o foco do funcionário cresce gradualmente. Quando o foco do funcionário supera certos thresholds, ele aplica um multiplicador à geração de produtividade do funcionário (e.g. x2, x3, ou x4).
+
+O Foco do funcionário pode cair, durante o dia, quando ele é interrompido por distrações, e volta para o início do threshold anterior quando ele troca de uma tarefa para outra.
+
+ESTRESSE
+
+Conforme o funcionário trabalha, ele lentamente ganha estresse. O estresse começa em 0, e pode chegar no máximo de 1, denotado visualmente numa barra de progresso.
+
+O estresse atua como um multiplicador negativo, 0.25+0.75*(1 - estresse), na produtividade do funcionário: quanto mais alto o estresse, menos produtivo o funcionário.
+
+Estresse excessivo não pode ser evitado - ele persiste de um dia para o outro, mas ele diminui em 0.2 (mínimo 0) de um dia para o outro. Por exemplo, se o funcionário termina um dia com 0.6 de estresse, ele inicia o próximo dia com 0.4 de estresse.
+
+INTERRUPÇÕES
+
+No primeiro nível, o funcionário simplesmente executa as suas tarefas na ordem especificada. Do segundo nível em diante, começam a aparecer complicações: distrações.
+
+Distrações são pequenos eventos que influenciam a produtividade, estresse, ou foco do funcionário. Distrações são resolvidas clicando no elemento visual que as representa. Alguns exemplos:
+ - Chefe batendo na porta: o chefe do funcionário chega na porta dele para conversar, e pedir alguma demanda. Resolvido clicando no chefe, fazendo ele ir embora. Quando o chefe chega, ele introduz uma nova tarefa na agenda do dia, que recebe prioridade absoluta (é realizada imediatamente), e tem baixa relevância. Quanto mais o jogador demorar para clicar no chefe, mais longa a tarefa extra se torna.
+ - Telefone. O telefone do funcinário toca, congelando o foco e a produtividade. Resolvido clicando no telefone. Se o jogador não resolver estra distração logo, o funcionário pára de trabalhar e pega o telefone, o que rapidamente reduz o seu foco.
+
+TAREFAS
+
+Cada tarefa tem os seguintes parâmetros:
+ - Duração: quanta produtividade tem que ser gerada para completar a tarefa.
+ - Relevância: quão importante uma tarefa é. A produtividade gerada pela tarefa é multiplicada pela sua relevância quando determinando o valor final de produtividade do dia.
+ - Complexidade: quão difícil uma tarefa é de executar. Certas tarefas só geram produtividade quando o funcionário alcança um nível mínimo de foco necessário, ou são penalizadas de maneira mais severa pelo estresse.
+
+Para tornar a etapa de planejamento mais interessante e complexa, algumas tarefas têm relações específicas entre elas, como por exemplo, uma tarefa que requer que outra tenha sido completada antes para ser iniciada, ou que dê um bônus de foco ao ser iniciada após outra tarefa específica.
+
+OVERTIME
+
+Quando os níveis do jogo mudam de representar um único dia para semanas inteiras, introduzimos a mecânica de "overtime": o jogador pode escolher colocar mais do que 8 horas de tarefas (até 4 horas extras) num único dia, mas isso vem a um custo pesado em estresse. Durante a primeira hora extra, o funcionário gera o dobro de estresse; durante a segunda hora extra, ele gera o triplo; e durante a terceira e quarta horas, ele gera 4x mais estresse.
+
+A intenção desta mecânica é que o usuário perceba que ela nunca vale a pena de ser usada - o resultado é sempre negativo, quando considerando a semana como um todo.
+
+MULTITAREFA
+
+Após um certo nível, introduzimos a possibilidade do funcionário trabalhar em duas tarefas simultaneamente. Neste estado, ele gera produtividade (25% reduzida) nas duas tarefas simultaneamente, mas, ao invés do seu foco crescer, ele gradualmente diminui, e o seu estresse aumenta 2x mais rápido.
+
+Similarmente à mecânica de overtime, a intenção é que usar multitarefa seja sempre uma opção ruim, ensinando o usuário que não vale a pena fazè-lo.

@@ -1,0 +1,12 @@
+OK, vamos planejar o próximo jogo.
+
+Nosso objetivo é criar uma experiência ativa de aprendizado, em que o jogador aprende, naturalmente, através do gameplay, os conceitos-chave (objetivos de aprendizagem) desejados.
+
+O tópico de ensino é "gestão eficiente do tempo", e nossos objetivos de aprendizagem são:
+
+ - Entender a importância de gastar tempo primariamente com tarefas que irão levar à realização de objetivos estratégicos;
+ - Ensinar a planejar, priorizar, e executar;
+ - Ensinar o impacto de interrupções não planejadas no planejamento do tempo;
+ - Ensinar o impacto do foco na eficiência de realização de tarefas, e como interrupções, durante uma tarefa complexa, levam a perdas de tempo e eficiência, como a necessidade de troca de contexto mental, erros causados devido a esta troca, além de um aumento na exaustão gerada pela realização das tarefas;
+ - Ensinar os prejuízos da procrastinação (processo de trocar uma tarefa mais importante por outra, menos relevante);
+ - Ensinar sobre as perdas de eficiência decorrentes de tentativas de fazer duas tarefas complexas em paralelo (multitarefa).
