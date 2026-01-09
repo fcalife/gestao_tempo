@@ -46,7 +46,46 @@ body {
   align-items: start;
 }
 
+.canvas-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.warning {
+  min-height: 32px;
+  margin-bottom: 8px;
+  color: #d12b2b;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.warning.is-visible {
+  opacity: 1;
+}
+
+.warning.flash {
+  animation: warning-flash 0.18s ease-out;
+}
+
+@keyframes warning-flash {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 canvas {
+  display: block;
   width: 100%;
   height: auto;
   border: 2px solid #111111;
@@ -74,30 +113,35 @@ canvas {
   letter-spacing: 0.08em;
 }
 
-#ready {
-  border: 2px solid #111111;
-  background: #ffffff;
-  padding: 10px 12px;
-  text-transform: uppercase;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-#ready:disabled {
-  cursor: default;
-  opacity: 0.5;
-}
-
-#ready:hover:not(:disabled) {
-  background: #111111;
-  color: #ffffff;
-}
-
 .hint {
   margin: 0;
   font-size: 11px;
   line-height: 1.4;
   text-transform: none;
+}
+
+.tooltip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  max-width: 220px;
+  padding: 8px 10px;
+  border: 1px solid #111111;
+  background: #ffffff;
+  font-size: 12px;
+  line-height: 1.3;
+  text-transform: none;
+  white-space: pre-line;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.tooltip.is-visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 @media (max-width: 900px) {

@@ -3,20 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Prototipo 2D - Garcom da Bandeja</title>
+    <title>Prototipo - Gestão de Tempo</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <main class="frame">
       <header class="top">
-        <h1>Garcom da Bandeja</h1>
+        <h1>Gestão de Tempo</h1>
         <div class="meta">
-          <span>Fase 1: escolha ate 5 objetos</span>
-          <span>Fase 2: atravesse automaticamente</span>
+          <span>Fase 1: escolha ate 9 objetos</span>
+          <span>Fase 2: atravesse segurando seta direita</span>
         </div>
       </header>
       <section class="play">
-        <canvas id="game" width="800" height="500" aria-label="Jogo 2D"></canvas>
+        <div class="canvas-wrap">
+          <div id="warning" class="warning" aria-live="polite"></div>
+          <canvas id="game" width="800" height="620" aria-label="Jogo 2D"></canvas>
+          <div id="tooltip" class="tooltip" role="status" aria-hidden="true"></div>
+        </div>
         <aside class="hud">
           <div class="stat">
             <label>Rodada</label>
@@ -42,11 +46,11 @@
             <label>Velocidade</label>
             <span id="speed">0</span>
           </div>
-          <button id="ready" type="button">Estou pronto</button>
-          <p class="hint">Clique nos objetos da esquerda para empilhar.</p>
+          <p class="hint">Clique nos objetos do topo. Segure a seta direita para andar.</p>
         </aside>
       </section>
     </main>
+    <script src="rounds.js"></script>
     <script src="game.js"></script>
   </body>
 </html>
