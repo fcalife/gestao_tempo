@@ -1,0 +1,111 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #ffffff;
+  color: #111111;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  letter-spacing: 0.02em;
+}
+
+.frame {
+  max-width: 1100px;
+  margin: 32px auto;
+  padding: 0 24px 32px;
+}
+
+.top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #111111;
+  padding-bottom: 12px;
+}
+
+.top h1 {
+  margin: 0;
+  font-size: 28px;
+  text-transform: uppercase;
+}
+
+.meta {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.play {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 240px;
+  gap: 20px;
+  align-items: start;
+}
+
+canvas {
+  width: 100%;
+  height: auto;
+  border: 2px solid #111111;
+  background: #ffffff;
+}
+
+.hud {
+  border: 2px solid #111111;
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.stat {
+  display: grid;
+  gap: 6px;
+  border-bottom: 1px solid #111111;
+  padding-bottom: 8px;
+}
+
+.stat span {
+  font-size: 18px;
+  letter-spacing: 0.08em;
+}
+
+#ready {
+  border: 2px solid #111111;
+  background: #ffffff;
+  padding: 10px 12px;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+#ready:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+#ready:hover:not(:disabled) {
+  background: #111111;
+  color: #ffffff;
+}
+
+.hint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  text-transform: none;
+}
+
+@media (max-width: 900px) {
+  .play {
+    grid-template-columns: 1fr;
+  }
+
+  .hud {
+    width: 100%;
+  }
+}
